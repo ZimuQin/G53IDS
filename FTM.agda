@@ -19,12 +19,6 @@ record Monoid (A : Set) : Set where
 
 open Monoid {{...}} public
 
-record ∃ (a : Set) (P : a -> Set) : Set where
-  field
-    witness : a
-    proof   : P witness
-
-
 data Node {V : Set} {{m : Monoid V}} (A : Set) : V → ℕ → Set where
   Node2 : {v1 v2 : V} {n : ℕ} → Node A v1 n → Node A v2 n → Node A (v1 ⊕ v2) (suc n)
   Node3 : {v1 v2 v3 : V} {n : ℕ} → Node A v1 n → Node A v2 n → Node A v3 n → Node A ((v1 ⊕ v2) ⊕ v3) (suc n)
