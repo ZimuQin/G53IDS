@@ -100,11 +100,7 @@ flatten : {A : Set} {n : ℕ} → FingerTree A n → List A
 flatten Empty = []
 flatten (Single a) = nodes a
 flatten (Deep pr m sf) = concatMap nodes (digits pr) ++ flatten m ++ concatMap nodes (digits sf)
-{-
-test : {A : Set} → (a : List A) → a ≡ flatten (toFingerTree a)
-test [] = refl
-test (x ∷ xs) = {!cong (_∷_ x) (test xs) !}
--}
+
 makeList : (n : ℕ) → List ℕ
 makeList zero = []
 makeList (suc n) = makeList n ++ (suc n) ∷ []
