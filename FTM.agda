@@ -50,18 +50,18 @@ substFingerTree {A} {n} = subst (λ Vx → FingerTree A Vx n)
 lemma1 : {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 : V} → _⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4 ≡ _⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4)
 lemma1 {_} {v1} {v2} {v3} {v4} = begin
                                     _⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4 ≡⟨
-                                    cong (λ vx → _⊕_ vx v4) (assoc v1 v2 v3) ⟩
+                                    cong (flip _⊕_ v4) (assoc v1 v2 v3) ⟩
                                     _⊕_ (_⊕_ v1 (_⊕_ v2 v3)) v4 ≡⟨ assoc v1 (_⊕_ v2 v3) v4 ⟩
                                     _⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4) ∎
 
 lemma2 : {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 v5 : V} → _⊕_ (_⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4) v5 ≡ _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5)
 lemma2 {_} {v1} {v2} {v3} {v4} {v5} = begin
-                                        _⊕_ (_⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4) v5 ≡⟨ cong (λ vx → _⊕_ vx v5) lemma1 ⟩
+                                        _⊕_ (_⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4) v5 ≡⟨ cong (flip _⊕_ v5) lemma1 ⟩
                                         _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4)) v5 ≡⟨ assoc v1 (_⊕_ (_⊕_ v2 v3) v4) v5 ⟩
                                         _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5) ∎
 
 lemma3 : {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 v5 v6 : V} → _⊕_ (_⊕_ (_⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4) v5) v6 ≡ _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5) v6)
-lemma3 {_} {v1} {v2} {v3} {v4} {v5} {v6} = begin _⊕_ (_⊕_ (_⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4) v5) v6 ≡⟨ cong (λ vx → _⊕_ vx v6) lemma2 ⟩
+lemma3 {_} {v1} {v2} {v3} {v4} {v5} {v6} = begin _⊕_ (_⊕_ (_⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4) v5) v6 ≡⟨ cong (flip _⊕_ v6) lemma2 ⟩
                                                  _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5)) v6 ≡⟨ assoc v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5) v6 ⟩
                                                  _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5) v6) ∎
 
@@ -74,7 +74,7 @@ lemma4 {_} {v1} {v2} {v3} {v4} {v5} {v6} {v7} = begin
                                                   cong (λ vx → _⊕_ (_⊕_ (_⊕_ v1 v2) vx) v7) (assoc v3 v4 (_⊕_ v5 v6))
                                                   ⟩
                                                   _⊕_ (_⊕_ (_⊕_ v1 v2) (_⊕_ v3 (_⊕_ v4 (_⊕_ v5 v6)))) v7 ≡⟨
-                                                  cong (λ vx → _⊕_ vx v7) (assoc v1 v2 (_⊕_ v3 (_⊕_ v4 (_⊕_ v5 v6))))
+                                                  cong (flip _⊕_ v7) (assoc v1 v2 (_⊕_ v3 (_⊕_ v4 (_⊕_ v5 v6))))
                                                   ⟩
                                                   _⊕_ (_⊕_ v1 (_⊕_ v2 (_⊕_ v3 (_⊕_ v4 (_⊕_ v5 v6))))) v7 ≡⟨
                                                   assoc v1 (_⊕_ v2 (_⊕_ v3 (_⊕_ v4 (_⊕_ v5 v6)))) v7 ⟩
@@ -94,7 +94,7 @@ lemma4 {_} {v1} {v2} {v3} {v4} {v5} {v6} {v7} = begin
 lemma5 : {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 v5 v6 v7 : V} → _⊕_ (_⊕_ v1 (_⊕_ v2 (_⊕_ (_⊕_ v3 v4) v5))) (_⊕_ v6 v7) ≡ _⊕_ (_⊕_ (_⊕_ v1 v2) (_⊕_ (_⊕_ (_⊕_ v3 v4) v5) v6)) v7
 lemma5 {_} {v1} {v2} {v3} {v4} {v5} {v6} {v7} = begin
                                                   _⊕_ (_⊕_ v1 (_⊕_ v2 (_⊕_ (_⊕_ v3 v4) v5))) (_⊕_ v6 v7) ≡⟨
-                                                  cong (λ vx → _⊕_ vx (_⊕_ v6 v7))
+                                                  cong (flip _⊕_ (_⊕_ v6 v7))
                                                   (sym (assoc v1 v2 (_⊕_ (_⊕_ v3 v4) v5)))
                                                   ⟩
                                                   _⊕_ (_⊕_ (_⊕_ v1 v2) (_⊕_ (_⊕_ v3 v4) v5)) (_⊕_ v6 v7) ≡⟨
@@ -230,7 +230,7 @@ digitToTree (One x) = Single x
 digitToTree (Two a b) = substFingerTree (cong (flip _⊕_ _) (sym (id1 _))) (Deep (One a) Empty (One b))
 digitToTree (Three a b c) = substFingerTree (cong (flip _⊕_ _) (sym (id1 _))) (Deep (Two a b) Empty (One c))
 digitToTree {_} {A} {n} (Four {v1} {v2} {v3} {v4} a b c d) = subst (λ Vx → FingerTree A Vx n) (begin
-                                                                      _⊕_ (_⊕_ (_⊕_ v1 v2) ∅) (_⊕_ v3 v4) ≡⟨ cong (λ v → _⊕_ v (_⊕_ v3 v4)) (sym (id1 (_⊕_ v1 v2))) ⟩
+                                                                      _⊕_ (_⊕_ (_⊕_ v1 v2) ∅) (_⊕_ v3 v4) ≡⟨ cong (flip _⊕_ (_⊕_ v3 v4)) (sym (id1 (_⊕_ v1 v2))) ⟩
                                                                       _⊕_ (_⊕_ v1 v2) (_⊕_ v3 v4) ≡⟨ sym (assoc (_⊕_ v1 v2) v3 v4) ⟩
                                                                       _⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4 ∎) (Deep (Two a b) Empty (Two c d))
 
