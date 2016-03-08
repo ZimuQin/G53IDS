@@ -1,4 +1,4 @@
-module FTM where
+
 
 open import Data.Nat
 open import Relation.Binary.PropositionalEquality
@@ -8,26 +8,11 @@ open import Function using (_∘_; flip)
 open import Data.Bool
 open import Data.Maybe
 
-record IsMonoid {A : Set} (∅ : A) (_⊕_ : A → A → A) : Set where
-  field
-    id1 : (x : A) → x ≡ x ⊕ ∅
-    id2 : (x : A) → x ≡ ∅ ⊕ x
-    assoc : (x y z : A) → (x ⊕ y) ⊕ z ≡ x ⊕ (y ⊕ z)
 
-record Monoid (A : Set) : Set where
-  field
-    ∅ : A
-    _⊕_ : A → A → A
-    isMonoid : IsMonoid ∅ _⊕_
-  open IsMonoid isMonoid public
+open import Relation.Binary.HeterogeneousEquality as H using (_≅_; ≡-to-≅)
 
-open Monoid {{...}} public
-
-record Measured (A : Set) (V : Set): Set where
-  field
-    measure : A → V
-
-open Measured {{...}} public
+open import Monoid
+open import Measured
 
 data Node {V : Set} {{m : Monoid V}} (A : Set) : V → ℕ → Set where
   Node2 : {v1 v2 : V} {n : ℕ} → Node A v1 n → Node A v2 n → Node A (v1 ⊕ v2) (suc n)
@@ -48,72 +33,15 @@ data FingerTree {V : Set} {{m : Monoid V}} (A : Set) : V → ℕ → Set where
 substFingerTree : {A : Set} {n : ℕ} {V : Set} {{m : Monoid V}} {v1 v2 : V} → v1 ≡ v2 → FingerTree A v1 n → FingerTree A v2 n
 substFingerTree {A} {n} = subst (λ Vx → FingerTree A Vx n)
 
-lemma1 : {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 : V} → _⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4 ≡ _⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4)
-lemma1 {_} {v1} {v2} {v3} {v4} = begin
-                                    _⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4 ≡⟨
-                                    cong (flip _⊕_ v4) (assoc v1 v2 v3) ⟩
-                                    _⊕_ (_⊕_ v1 (_⊕_ v2 v3)) v4 ≡⟨ assoc v1 (_⊕_ v2 v3) v4 ⟩
-                                    _⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4) ∎
-
-lemma2 : {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 v5 : V} → _⊕_ (_⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4) v5 ≡ _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5)
-lemma2 {_} {v1} {v2} {v3} {v4} {v5} = begin
-                                        _⊕_ (_⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4) v5 ≡⟨ cong (flip _⊕_ v5) lemma1 ⟩
-                                        _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4)) v5 ≡⟨ assoc v1 (_⊕_ (_⊕_ v2 v3) v4) v5 ⟩
-                                        _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5) ∎
-
-lemma3 : {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 v5 v6 : V} → _⊕_ (_⊕_ (_⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4) v5) v6 ≡ _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5) v6)
-lemma3 {_} {v1} {v2} {v3} {v4} {v5} {v6} = begin _⊕_ (_⊕_ (_⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4) v5) v6 ≡⟨ cong (flip _⊕_ v6) lemma2 ⟩
-                                                 _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5)) v6 ≡⟨ assoc v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5) v6 ⟩
-                                                 _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5) v6) ∎
-
-lemma4 : {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 v5 v6 v7 : V} → _⊕_ (_⊕_ (_⊕_ v1 v2) (_⊕_ (_⊕_ (_⊕_ v3 v4) v5) v6)) v7 ≡ _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5) v6) v7)
-lemma4 {_} {v1} {v2} {v3} {v4} {v5} {v6} {v7} = begin
-                                                  _⊕_ (_⊕_ (_⊕_ v1 v2) (_⊕_ (_⊕_ (_⊕_ v3 v4) v5) v6)) v7 ≡⟨
-                                                  cong (λ vx → _⊕_ (_⊕_ (_⊕_ v1 v2) vx) v7) (assoc (_⊕_ v3 v4) v5 v6)
-                                                  ⟩
-                                                  _⊕_ (_⊕_ (_⊕_ v1 v2) (_⊕_ (_⊕_ v3 v4) (_⊕_ v5 v6))) v7 ≡⟨
-                                                  cong (λ vx → _⊕_ (_⊕_ (_⊕_ v1 v2) vx) v7) (assoc v3 v4 (_⊕_ v5 v6))
-                                                  ⟩
-                                                  _⊕_ (_⊕_ (_⊕_ v1 v2) (_⊕_ v3 (_⊕_ v4 (_⊕_ v5 v6)))) v7 ≡⟨
-                                                  cong (flip _⊕_ v7) (assoc v1 v2 (_⊕_ v3 (_⊕_ v4 (_⊕_ v5 v6))))
-                                                  ⟩
-                                                  _⊕_ (_⊕_ v1 (_⊕_ v2 (_⊕_ v3 (_⊕_ v4 (_⊕_ v5 v6))))) v7 ≡⟨
-                                                  assoc v1 (_⊕_ v2 (_⊕_ v3 (_⊕_ v4 (_⊕_ v5 v6)))) v7 ⟩
-                                                  _⊕_ v1 (_⊕_ (_⊕_ v2 (_⊕_ v3 (_⊕_ v4 (_⊕_ v5 v6)))) v7) ≡⟨
-                                                  cong (λ vx → _⊕_ v1 (_⊕_ vx v7))
-                                                  (sym (assoc v2 v3 (_⊕_ v4 (_⊕_ v5 v6))))
-                                                  ⟩
-                                                  _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) (_⊕_ v4 (_⊕_ v5 v6))) v7) ≡⟨
-                                                  cong (λ vx → _⊕_ v1 (_⊕_ vx v7))
-                                                  (sym (assoc (_⊕_ v2 v3) v4 (_⊕_ v5 v6)))
-                                                  ⟩
-                                                  _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) (_⊕_ v5 v6)) v7) ≡⟨
-                                                  cong (λ vx → _⊕_ v1 (_⊕_ vx v7))
-                                                  (sym (assoc (_⊕_ (_⊕_ v2 v3) v4) v5 v6))
-                                                  ⟩ _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ (_⊕_ (_⊕_ v2 v3) v4) v5) v6) v7) ∎
-
-lemma5 : {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 v5 v6 v7 : V} → _⊕_ (_⊕_ v1 (_⊕_ v2 (_⊕_ (_⊕_ v3 v4) v5))) (_⊕_ v6 v7) ≡ _⊕_ (_⊕_ (_⊕_ v1 v2) (_⊕_ (_⊕_ (_⊕_ v3 v4) v5) v6)) v7
-lemma5 {_} {v1} {v2} {v3} {v4} {v5} {v6} {v7} = begin
-                                                  _⊕_ (_⊕_ v1 (_⊕_ v2 (_⊕_ (_⊕_ v3 v4) v5))) (_⊕_ v6 v7) ≡⟨
-                                                  cong (flip _⊕_ (_⊕_ v6 v7))
-                                                  (sym (assoc v1 v2 (_⊕_ (_⊕_ v3 v4) v5)))
-                                                  ⟩
-                                                  _⊕_ (_⊕_ (_⊕_ v1 v2) (_⊕_ (_⊕_ v3 v4) v5)) (_⊕_ v6 v7) ≡⟨
-                                                  assoc (_⊕_ v1 v2) (_⊕_ (_⊕_ v3 v4) v5) (_⊕_ v6 v7) ⟩
-                                                  _⊕_ (_⊕_ v1 v2) (_⊕_ (_⊕_ (_⊕_ v3 v4) v5) (_⊕_ v6 v7)) ≡⟨
-                                                  cong (_⊕_ (_⊕_ v1 v2)) (sym (assoc (_⊕_ (_⊕_ v3 v4) v5) v6 v7)) ⟩
-                                                  _⊕_ (_⊕_ v1 v2) (_⊕_ (_⊕_ (_⊕_ (_⊕_ v3 v4) v5) v6) v7) ≡⟨
-                                                  sym (assoc (_⊕_ v1 v2) (_⊕_ (_⊕_ (_⊕_ v3 v4) v5) v6) v7) ⟩
-                                                  _⊕_ (_⊕_ (_⊕_ v1 v2) (_⊕_ (_⊕_ (_⊕_ v3 v4) v5) v6)) v7 ∎
-
 infixr 5 _◁_
 _◁_ : {V : Set} {{m : Monoid V}} {A : Set} {n : ℕ} {v1 v2 : V} → Node A v1 n → FingerTree A v2 n → FingerTree A (v1 ⊕ v2) n
 a ◁ Empty = substFingerTree (id1 _) (Single a)
 a ◁ Single b = substFingerTree (cong (flip _⊕_ _) (sym (id1 _))) (Deep (One a) Empty (One b))
-a ◁ Deep (One b) m sf = substFingerTree lemma1 (Deep (Two a b) m sf)
-a ◁ Deep (Two b c) m sf  = substFingerTree lemma2 (Deep (Three a b c) m sf)
-a ◁ Deep (Three b c d) m sf = substFingerTree lemma3 (Deep (Four a b c d) m sf)
-a ◁ Deep (Four b c d e) m sf = substFingerTree lemma4 (Deep (Two a b) (Node3 c d e ◁ m) sf)
+a ◁ Deep (One b) m sf = substFingerTree Monoid.lemma1 (Deep (Two a b) m sf)
+a ◁ Deep (Two b c) m sf  = substFingerTree Monoid.lemma2 (Deep (Three a b c) m sf)
+a ◁ Deep (Three b c d) m sf = substFingerTree Monoid.lemma3 (Deep (Four a b c d) m sf)
+a ◁ Deep (Four b c d e) m sf = substFingerTree Monoid.lemma4 (Deep (Two a b) (Node3 c d e ◁ m) sf)
+
 
 infixl 5 _▷_
 _▷_ :  {V : Set} {{m : Monoid V}} {A : Set} {n : ℕ} {v2 v1 : V} → FingerTree A v1 n → Node A v2 n → FingerTree A (v1 ⊕ v2) n
@@ -122,7 +50,7 @@ Single b ▷ a = substFingerTree (cong (flip _⊕_ _) (sym (id1 _))) (Deep (One 
 Deep pr m (One b) ▷ a = substFingerTree (sym (assoc _ _ _)) (Deep pr m (Two b a))
 Deep pr m (Two c b) ▷ a = substFingerTree (sym (assoc _ _ _)) (Deep pr m (Three c b a))
 Deep pr m (Three d c b) ▷ a = substFingerTree (sym (assoc _ _ _)) (Deep pr m (Four d c b a))
-Deep pr m (Four e d c b) ▷ a = substFingerTree lemma5 (Deep pr (m ▷ Node3 e d c) (Two b a))
+Deep pr m (Four e d c b) ▷ a = substFingerTree Monoid.lemma5 (Deep pr (m ▷ Node3 e d c) (Two b a))
 
 reducerNode : {A : Set} {B : Set} {n : ℕ} {V : Set} {v : V} {{m : Monoid V}} → (A → B → B) → Node A v n → B → B
 reducerNode _⤙_ (Node2 a b) z = reducerNode _⤙_ a (reducerNode _⤙_ b z)
@@ -163,11 +91,10 @@ record Reduce (F : Set → Set) : Set₁ where
   field
     reducer : {A : Set} {B : Set} → (A → B → B) → F A → B → B
     reducel : {A : Set} {B : Set} → (B → A → B) → B → F A → B
+  toList : {A : Set} → F A → List A
+  toList s = reducer _∷_ s []
     
 open Reduce {{...}} public
-
-toList : {F : Set → Set} {{r : Reduce F}} {A : Set} → F A → List A
-toList s = reducer _∷_ s []
 
 reduceDigit : {V : Set} {{m : Monoid V}} {v : V} {n : ℕ} → Reduce (λ A → Digit A v n)
 reduceDigit = record { reducer = reducerDigit ; reducel = reducelDigit }
@@ -373,10 +300,20 @@ viewL t with headL t
 ... | nothing = NilL
 ... | just x  = ConsL x (tailL t)
 
+viewLNilL : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (ft : FingerTree A v n) → viewL ft ≡ NilL → v ≡ ∅
+viewLNilL Empty _ = refl
+viewLNilL (Single _) ()
+viewLNilL (Deep _ _ _) ()
+
 viewR : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (ft : FingerTree A v n) → ViewR (λ _ → FingerTree A (initV ft) n) (Node A (lastV ft) n)
 viewR t with headR t
 ... | nothing = NilR
 ... | just x  = ConsR x (tailR t)
+
+viewRNilR : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (ft : FingerTree A v n) → viewR ft ≡ NilR → v ≡ ∅
+viewRNilR Empty _ = refl
+viewRNilR (Single _) ()
+viewRNilR (Deep _ _ _) ()
 
 isEmpty : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} → FingerTree A v n → Bool
 isEmpty x with viewL x
@@ -459,7 +396,7 @@ lemma8 {_} {v1} {v2} {v3} {v4} {v5} {v6} {v7} = begin
                                                   cong (λ v → _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v) v6)) v7)
                                                   (assoc v3 v4 v5) ⟩
                                                   _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 (_⊕_ v3 (_⊕_ v4 v5))) v6)) v7 ≡⟨
-                                                  cong (λ v → _⊕_ v v7)
+                                                  cong (flip _⊕_ v7)
                                                   (sym (assoc v1 (_⊕_ v2 (_⊕_ v3 (_⊕_ v4 v5))) v6))
                                                   ⟩
                                                   _⊕_ (_⊕_ (_⊕_ v1 (_⊕_ v2 (_⊕_ v3 (_⊕_ v4 v5)))) v6) v7 ≡⟨
@@ -522,7 +459,457 @@ getV {v = v} _ = v
 produceSeq : (_ : ℕ) → FingerTree {{monoidSize}} ℕ _ zero -- (foldr (λ _ → _+_ 1) zero (makeList v))
 produceSeq = listToSeq ∘ makeList
 
-lemma : {V : Set} {{m : Monoid V}} {A : Set} {{mea : Measured A V}} (xs : List A) → toList {{reduceFingerTree {A = A}}} (listToTree xs) ≡ xs
-lemma [] = refl
-lemma (x ∷ []) = {!!}
-lemma (x ∷ x₁ ∷ xs) = {!!}
+open import Level using (Level)
+
+hcong' : {I : Set} {i j : I}
+       -> (A : I -> Set) {B : {k : I} -> A k -> Set} {x : A i} {y : A j}
+       -> i ≡ j
+       -> (f : {k : I} -> (x : A k) -> B x)
+       -> x ≅ y
+       -> f x ≅ f y
+hcong' _ refl _ H.refl = H.refl
+
+{-lemmax : (p : v1 ≡ v2) → substFingerTree p (x ∷ []) ≡ x ∷ []-}
+
+
+lemmax1 : {V : Set} {{m : Monoid V}} {A : Set} {v1 v2 : V} {n : ℕ} (ft : FingerTree A v1 n) (eq : v1 ≡ v2) → substFingerTree eq ft ≅ ft
+lemmax1 ft refl = H.refl
+
+lemmax2 : {V : Set} {{m : Monoid V}} {A : Set} {v1 v2 : V} {n : ℕ} (ft : FingerTree A v1 n) (eq : v1 ≡ v2) → toList {{reduceFingerTree {A = A}}} (substFingerTree eq ft) ≡ toList {{reduceFingerTree {A = A}}} ft
+lemmax2 {A = A} ft eq = H.≅-to-≡ (hcong' (λ v → FingerTree A v _) (sym eq) (toList {{reduceFingerTree {A = A}}}) (lemmax1 ft eq))
+
+listId1 :  {A : Set} (x : List A) → x ≡ x ++ []
+listId1 [] = refl
+listId1 (x ∷ xs) = cong (_∷_ x) (listId1 xs)
+
+listAssoc : {A : Set} (x y z : List A) → (x ++ y) ++ z ≡ x ++ y ++ z
+listAssoc [] y z = refl
+listAssoc (x ∷ xs) y z = cong (_∷_ x) (listAssoc xs y z)
+
+lemmaNode : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (a : Node A v n) (xs : List A) → reducerNode _∷_ a xs ≡ reducerNode _∷_ a [] ++ xs
+lemmaNode (Node2 a b) xs = begin
+                             reducerNode _∷_ a (reducerNode _∷_ b xs) ≡⟨
+                             cong (reducerNode _∷_ a) (lemmaNode b xs) ⟩
+                             reducerNode _∷_ a (reducerNode _∷_ b [] ++ xs) ≡⟨
+                             lemmaNode a (reducerNode _∷_ b [] ++ xs) ⟩
+                             reducerNode _∷_ a [] ++ reducerNode _∷_ b [] ++ xs ≡⟨
+                             sym (listAssoc (reducerNode _∷_ a []) (reducerNode _∷_ b []) xs) ⟩
+                             (reducerNode _∷_ a [] ++ reducerNode _∷_ b []) ++ xs ≡⟨
+                             cong (flip _++_ xs) (sym (lemmaNode a (reducerNode _∷_ b []))) ⟩
+                             reducerNode _∷_ a (reducerNode _∷_ b []) ++ xs ∎
+lemmaNode (Node3 a b c) xs = begin
+                               reducerNode _∷_ a (reducerNode _∷_ b (reducerNode _∷_ c xs)) ≡⟨
+                               cong (λ x → reducerNode _∷_ a (reducerNode _∷_ b x))
+                               (lemmaNode c xs)
+                               ⟩
+                               reducerNode _∷_ a (reducerNode _∷_ b (reducerNode _∷_ c [] ++ xs))
+                               ≡⟨
+                               cong (reducerNode _∷_ a) (lemmaNode b (reducerNode _∷_ c [] ++ xs))
+                               ⟩
+                               reducerNode _∷_ a
+                               (reducerNode _∷_ b [] ++ reducerNode _∷_ c [] ++ xs)
+                               ≡⟨ lemmaNode a (reducerNode _∷_ b [] ++ reducerNode _∷_ c [] ++ xs)
+                               ⟩
+                               reducerNode _∷_ a [] ++
+                               reducerNode _∷_ b [] ++ reducerNode _∷_ c [] ++ xs
+                               ≡⟨
+                               cong (_++_ (reducerNode _∷_ a []))
+                               (sym (listAssoc (reducerNode _∷_ b []) (reducerNode _∷_ c []) xs))
+                               ⟩
+                               reducerNode _∷_ a [] ++
+                               (reducerNode _∷_ b [] ++ reducerNode _∷_ c []) ++ xs
+                               ≡⟨
+                               sym
+                               (listAssoc (reducerNode _∷_ a [])
+                                (reducerNode _∷_ b [] ++ reducerNode _∷_ c []) xs)
+                               ⟩
+                               (reducerNode _∷_ a [] ++
+                                reducerNode _∷_ b [] ++ reducerNode _∷_ c [])
+                               ++ xs
+                               ≡⟨
+                               cong (flip _++_ xs)
+                               (sym (lemmaNode a (reducerNode _∷_ b [] ++ reducerNode _∷_ c [])))
+                               ⟩
+                               reducerNode _∷_ a (reducerNode _∷_ b [] ++ reducerNode _∷_ c []) ++
+                               xs
+                               ≡⟨
+                               cong (λ x → reducerNode _∷_ a x ++ xs)
+                               (sym (lemmaNode b (reducerNode _∷_ c [])))
+                               ⟩
+                               reducerNode _∷_ a (reducerNode _∷_ b (reducerNode _∷_ c [])) ++ xs
+                               ∎
+lemmaNode (Leaf x) xs = refl
+
+lemmaDigit : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (d : Digit A v n) (xs : List A) → reducerDigit _∷_ d xs ≡ reducerDigit _∷_ d [] ++ xs
+lemmaDigit (One x) xs = lemmaNode x xs
+lemmaDigit (Two a b) xs = lemmaNode (Node2 a b) xs
+lemmaDigit (Three a b c) xs = lemmaNode (Node3 a b c) xs
+lemmaDigit (Four a b c d) xs = lemmaNode (Node2 (Node2 a b) (Node2 c d)) xs
+
+lemmaFingerTree : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (ft : FingerTree A v n) (xs : List A) → reducerFingerTree _∷_ ft xs ≡ reducerFingerTree _∷_ ft [] ++ xs
+lemmaFingerTree Empty xs = refl
+lemmaFingerTree (Single x) xs = lemmaNode x xs
+lemmaFingerTree (Deep pr m sf) xs = begin
+                                      reducerDigit _∷_ pr
+                                      (reducerFingerTree _∷_ m (reducerDigit _∷_ sf xs))
+                                      ≡⟨ lemmaDigit pr (reducerFingerTree _∷_ m (reducerDigit _∷_ sf xs))
+                                      ⟩
+                                      reducerDigit _∷_ pr [] ++
+                                      reducerFingerTree _∷_ m (reducerDigit _∷_ sf xs)
+                                      ≡⟨
+                                      cong (_++_ (reducerDigit _∷_ pr []))
+                                      (lemmaFingerTree m (reducerDigit _∷_ sf xs))
+                                      ⟩
+                                      reducerDigit _∷_ pr [] ++
+                                      reducerFingerTree _∷_ m [] ++ reducerDigit _∷_ sf xs
+                                      ≡⟨
+                                      cong
+                                      (λ x → reducerDigit _∷_ pr [] ++ reducerFingerTree _∷_ m [] ++ x)
+                                      (lemmaDigit sf xs)
+                                      ⟩
+                                      reducerDigit _∷_ pr [] ++
+                                      reducerFingerTree _∷_ m [] ++ reducerDigit _∷_ sf [] ++ xs
+                                      ≡⟨
+                                      cong (_++_ (reducerDigit _∷_ pr []))
+                                      (sym
+                                       (listAssoc (reducerFingerTree _∷_ m []) (reducerDigit _∷_ sf [])
+                                        xs))
+                                      ⟩
+                                      reducerDigit _∷_ pr [] ++
+                                      (reducerFingerTree _∷_ m [] ++ reducerDigit _∷_ sf []) ++ xs
+                                      ≡⟨
+                                      sym
+                                      (listAssoc (reducerDigit _∷_ pr [])
+                                       (reducerFingerTree _∷_ m [] ++ reducerDigit _∷_ sf []) xs)
+                                      ⟩
+                                      (reducerDigit _∷_ pr [] ++
+                                       reducerFingerTree _∷_ m [] ++ reducerDigit _∷_ sf [])
+                                      ++ xs
+                                      ≡⟨
+                                      cong (flip _++_ xs)
+                                      (sym
+                                       (lemmaDigit pr
+                                        (reducerFingerTree _∷_ m [] ++ reducerDigit _∷_ sf [])))
+                                      ⟩
+                                      reducerDigit _∷_ pr
+                                      (reducerFingerTree _∷_ m [] ++ reducerDigit _∷_ sf [])
+                                      ++ xs
+                                      ≡⟨
+                                      cong (λ x → reducerDigit _∷_ pr x ++ xs)
+                                      (sym (lemmaFingerTree m (reducerDigit _∷_ sf [])))
+                                      ⟩
+                                      reducerDigit _∷_ pr
+                                      (reducerFingerTree _∷_ m (reducerDigit _∷_ sf []))
+                                      ++ xs
+                                      ∎
+
+lemmax3 : {A : Set} {n : ℕ} {V : Set} {{m : Monoid V}} {v1 v2 v3 : V} (pr : Digit A v1 n) (m : FingerTree A v2 (suc n)) (sf : Digit A v3 n) → toList {{reduceFingerTree {A = A}}} (Deep pr m sf) ≡ toList {{reduceDigit}} pr ++ toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+lemmax3 pr m sf = begin
+                    reducerDigit _∷_ pr
+                    (reducerFingerTree _∷_ m (reducerDigit _∷_ sf []))
+                    ≡⟨ lemmaDigit pr (reducerFingerTree _∷_ m (reducerDigit _∷_ sf []))
+                    ⟩
+                    reducerDigit _∷_ pr [] ++
+                    reducerFingerTree _∷_ m (reducerDigit _∷_ sf [])
+                    ≡⟨
+                    cong (_++_ (reducerDigit _∷_ pr []))
+                    (lemmaFingerTree m (reducerDigit _∷_ sf []))
+                    ⟩
+                    reducerDigit _∷_ pr [] ++
+                    reducerFingerTree _∷_ m [] ++ reducerDigit _∷_ sf []
+                    ∎
+
+lemmax4 : {V : Set} {v1 v2 : V} {{m : Monoid V}} {A : Set} {n : ℕ} (ft : FingerTree A v1 n) (node : Node A v2 n) → toList {{reduceFingerTree {A = A}}} (node ◁ ft) ≡ toList {{reduceNode {A = A}}} node ++ toList {{reduceFingerTree {A = A}}} ft
+lemmax4 {A = A} {n = n} Empty a = begin
+                                    toList {{reduceFingerTree {A = A}}} (a ◁ Empty) ≡⟨
+                                    lemmax2 (Single a) (id1 _) ⟩
+                                    toList {{reduceFingerTree {A = A}}} (Single a) ≡⟨
+                                    listId1 (toList {{reduceFingerTree {A = A}}} (Single a)) ⟩
+                                    toList {{reduceFingerTree {A = A}}} (Single a) ++ [] ≡⟨
+                                    cong (flip _++_ []) lemma ⟩
+                                    toList {{reduceNode {A = A}}} a ++ []
+                                    ∎
+                               where lemma : toList {{reduceFingerTree {A = A}}} (Single a) ≡ toList {{reduceNode {A = A}}} a
+                                     lemma = refl
+lemmax4 {A = A} (Single b) a = begin
+                                 toList {{reduceFingerTree {A = A}}} (a ◁ Single b) ≡⟨
+                                 lemmax2 (Deep (One a) Empty (One b))
+                                 (cong (flip _⊕_ _) (sym (id1 _)))
+                                 ⟩
+                                 toList {{reduceFingerTree {A = A}}} (Deep (One a) Empty (One b)) ≡⟨
+                                 lemmax3 (One a) Empty (One b) ⟩
+                                 toList {{reduceNode {A = A}}} a ++
+                                 toList {{reduceFingerTree {A = A}}} (Single b)
+                                 ∎
+lemmax4 {A = A} (Deep (One b) m sf) a = begin
+                                          toList {{reduceFingerTree {A = A}}} (a ◁ Deep (One b) m sf) ≡⟨
+                                          lemmax2 (Deep (Two a b) m sf) lemma1 ⟩
+                                          toList {{reduceFingerTree {A = A}}} (Deep (Two a b) m sf) ≡⟨
+                                          lemmax3 (Two a b) m sf ⟩
+                                          toList {{reduceDigit}} (Two a b) ++
+                                          toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                          ≡⟨
+                                          cong
+                                          (λ x →
+                                             x ++
+                                             toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf)
+                                          (lemmaNode a (reducerNode _∷_ b []))
+                                          ⟩
+                                          (reducerNode _∷_ a [] ++ reducerNode _∷_ b []) ++
+                                          toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                          ≡⟨
+                                          listAssoc (reducerNode _∷_ a []) (reducerNode _∷_ b [])
+                                          (toList {{reduceFingerTree {A = A}}} m ++
+                                           toList {{reduceDigit}} sf)
+                                          ⟩
+                                          reducerNode _∷_ a [] ++
+                                          reducerNode _∷_ b [] ++
+                                          toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                          ≡⟨ cong (_++_ (reducerNode _∷_ a [])) (sym (lemmax3 (One b) m sf))
+                                          ⟩
+                                          reducerNode _∷_ a [] ++
+                                          toList {{reduceFingerTree {A = A}}} (Deep (One b) m sf)
+                                          ∎
+lemmax4 {A = A} (Deep (Two b c) m sf) a = begin
+                                            toList {{reduceFingerTree {A = A}}} (a ◁ Deep (Two b c) m sf) ≡⟨
+                                            lemmax2 (Deep (Three a b c) m sf) lemma2 ⟩
+                                            toList {{reduceFingerTree {A = A}}} (Deep (Three a b c) m sf) ≡⟨
+                                            lemmax3 (Three a b c) m sf ⟩
+                                            toList {{reduceDigit}} (Three a b c) ++
+                                            toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                            ≡⟨
+                                            cong
+                                            (λ x →
+                                               x ++
+                                               toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf)
+                                            (lemmaNode a (toList {{reduceDigit}} (Two b c)))
+                                            ⟩
+                                            (reducerNode _∷_ a [] ++ toList {{reduceDigit}} (Two b c)) ++
+                                            toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                            ≡⟨
+                                            listAssoc (reducerNode _∷_ a []) (toList {{reduceDigit}} (Two b c))
+                                            (toList {{reduceFingerTree {A = A}}} m ++
+                                             toList {{reduceDigit}} sf)
+                                            ⟩
+                                            reducerNode _∷_ a [] ++
+                                            toList {{reduceDigit}} (Two b c) ++
+                                            toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                            ≡⟨
+                                            cong (_++_ (reducerNode _∷_ a [])) (sym (lemmax3 (Two b c) m sf)) ⟩
+                                            reducerNode _∷_ a [] ++
+                                            toList {{reduceFingerTree {A = A}}} (Deep (Two b c) m sf)
+                                            ∎
+lemmax4 {A = A} (Deep (Three b c d) m sf) a = begin
+                                                toList {{reduceFingerTree {A = A}}} (a ◁ Deep (Three b c d) m sf)
+                                                ≡⟨ lemmax2 (Deep (Four a b c d) m sf) lemma3 ⟩
+                                                toList {{reduceFingerTree {A = A}}} (Deep (Four a b c d) m sf) ≡⟨
+                                                lemmax3 (Four a b c d) m sf ⟩
+                                                toList {{reduceDigit}} (Four a b c d) ++
+                                                toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                                ≡⟨
+                                                cong
+                                                (λ x →
+                                                   x ++
+                                                   toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf)
+                                                (lemmaNode a (toList {{reduceDigit}} (Three b c d)))
+                                                ⟩
+                                                (reducerNode _∷_ a [] ++ toList {{reduceDigit}} (Three b c d)) ++
+                                                toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                                ≡⟨
+                                                listAssoc (reducerNode _∷_ a [])
+                                                (toList {{reduceDigit}} (Three b c d))
+                                                (toList {{reduceFingerTree {A = A}}} m ++
+                                                 toList {{reduceDigit}} sf)
+                                                ⟩
+                                                reducerNode _∷_ a [] ++
+                                                toList {{reduceDigit}} (Three b c d) ++
+                                                toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                                ≡⟨
+                                                cong (_++_ (reducerNode _∷_ a []))
+                                                (sym (lemmax3 (Three b c d) m sf))
+                                                ⟩
+                                                reducerNode _∷_ a [] ++
+                                                toList {{reduceFingerTree {A = A}}} (Deep (Three b c d) m sf)
+                                                ∎
+lemmax4 {A = A} (Deep (Four b c d e) m sf) a = begin
+                                                 toList {{reduceFingerTree {A = A}}} (a ◁ Deep (Four b c d e) m sf)
+                                                 ≡⟨ lemmax2 (Deep (Two a b) (Node3 c d e ◁ m) sf) lemma4 ⟩
+                                                 toList {{reduceFingerTree {A = A}}}
+                                                 (Deep (Two a b) (Node3 c d e ◁ m) sf)
+                                                 ≡⟨ lemmax3 (Two a b) (Node3 c d e ◁ m) sf ⟩
+                                                 toList {{reduceDigit}} (Two a b) ++
+                                                 toList {{reduceFingerTree {A = A}}} (Node3 c d e ◁ m) ++
+                                                 toList {{reduceDigit}} sf
+                                                 ≡⟨
+                                                 cong
+                                                 (λ xs →
+                                                    toList {{reduceDigit}} (Two a b) ++
+                                                    xs ++ toList {{reduceDigit}} sf)
+                                                 (lemmax4 m (Node3 c d e))
+                                                 ⟩
+                                                 toList {{reduceDigit}} (Two a b) ++
+                                                 (toList {{reduceNode {A = A}}} (Node3 c d e) ++
+                                                  toList {{reduceFingerTree {A = A}}} m)
+                                                 ++ toList {{reduceDigit}} sf
+                                                 ≡⟨
+                                                 cong
+                                                 (λ x →
+                                                    x ++
+                                                    (toList {{reduceNode {A = A}}} (Node3 c d e) ++
+                                                     toList {{reduceFingerTree {A = A}}} m)
+                                                    ++ toList {{reduceDigit}} sf)
+                                                 (lemmaNode a (reducerNode _∷_ b []))
+                                                 ⟩
+                                                 (toList {{reduceNode {A = A}}} a ++
+                                                  toList {{reduceNode {A = A}}} b)
+                                                 ++
+                                                 (toList {{reduceNode {A = A}}} (Node3 c d e) ++
+                                                  toList {{reduceFingerTree {A = A}}} m)
+                                                 ++ toList {{reduceDigit}} sf
+                                                 ≡⟨
+                                                 cong
+                                                 (_++_
+                                                  (toList {{reduceNode {A = A}}} a ++
+                                                   toList {{reduceNode {A = A}}} b))
+                                                 (listAssoc (toList {{reduceNode {A = A}}} (Node3 c d e))
+                                                  (toList {{reduceFingerTree {A = A}}} m)
+                                                  (toList {{reduceDigit}} sf))
+                                                 ⟩
+                                                 (toList {{reduceNode {A = A}}} a ++
+                                                  toList {{reduceNode {A = A}}} b)
+                                                 ++
+                                                 toList {{reduceNode {A = A}}} (Node3 c d e) ++
+                                                 toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                                 ≡⟨
+                                                 listAssoc (toList {{reduceNode {A = A}}} a)
+                                                 (toList {{reduceNode {A = A}}} b)
+                                                 (toList {{reduceNode {A = A}}} (Node3 c d e) ++
+                                                  toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf)
+                                                 ⟩
+                                                 toList {{reduceNode {A = A}}} a ++
+                                                 toList {{reduceNode {A = A}}} b ++
+                                                 toList {{reduceNode {A = A}}} (Node3 c d e) ++
+                                                 toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                                 ≡⟨
+                                                 cong (_++_ (toList {{reduceNode {A = A}}} a))
+                                                 (sym
+                                                  (listAssoc (toList {{reduceNode {A = A}}} b)
+                                                   (toList {{reduceNode {A = A}}} (Node3 c d e))
+                                                   (toList {{reduceFingerTree {A = A}}} m ++
+                                                    toList {{reduceDigit}} sf)))
+                                                 ⟩
+                                                 toList {{reduceNode {A = A}}} a ++
+                                                 (toList {{reduceNode {A = A}}} b ++
+                                                  toList {{reduceNode {A = A}}} (Node3 c d e))
+                                                 ++
+                                                 toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                                 ≡⟨
+                                                 cong
+                                                 (λ x →
+                                                    toList {{reduceNode {A = A}}} a ++
+                                                    x ++
+                                                    toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf)
+                                                 (sym (lemmaNode b (toList {{reduceNode {A = A}}} (Node3 c d e))))
+                                                 ⟩
+                                                 toList {{reduceNode {A = A}}} a ++
+                                                 toList {{reduceDigit}} (Four b c d e) ++
+                                                 toList {{reduceFingerTree {A = A}}} m ++ toList {{reduceDigit}} sf
+                                                 ≡⟨
+                                                 cong (_++_ (toList {{reduceNode {A = A}}} a))
+                                                 (sym (lemmax3 (Four b c d e) m sf))
+                                                 ⟩
+                                                 toList {{reduceNode {A = A}}} a ++
+                                                 toList {{reduceFingerTree {A = A}}} (Deep (Four b c d e) m sf)
+                                                 ∎
+
+lemmax : {V : Set} {{m : Monoid V}} {A : Set} {{mea : Measured A V}} (xs : List A) → toList {{reduceFingerTree {A = A}}} (listToTree xs) ≡ xs
+lemmax [] = refl
+lemmax {A = A} (x ∷ xs) = begin
+                           toList {{reduceFingerTree {A = A}}} (Leaf x ◁ listToTree xs) ≡⟨
+                           lemmax4 (listToTree xs) (Leaf x) ⟩
+                           x ∷ toList {{reduceFingerTree {A = A}}} (listToTree xs) ≡⟨
+                           cong (_∷_ x) (lemmax xs) ⟩ x ∷ xs ∎
+
+data Split (F1 : Set → Set) (A : Set) (F2 : Set → Set) : Set where
+  split : F1 A → A → F2 A → Split F1 A F2
+
+splitTree : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {{mea : Measured A V}} {n : ℕ} (p : V → Bool) (i : V) (ft : FingerTree A v n) {le : isEmpty ft ≡ false} → Split (λ _ → FingerTree A _ n) (Node A _ n) (λ _ → FingerTree A _ n)
+splitTree p i Empty {}
+splitTree p i (Single x) = split Empty x Empty
+splitTree p i (Deep {v1} {v2} {v3} pr m sf) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2)
+splitTree p i (Deep (One x) m₁ sf) | true | w = {!!}
+splitTree p i (Deep (Two x x₁) m₁ sf) | true | w = {!!}
+splitTree p i (Deep (Three x x₁ x₂) m₁ sf) | true | w = {!!}
+splitTree p i (Deep (Four x x₁ x₂ x₃) m₁ sf) | true | w  = {!!}
+... | _ | true = {!!}
+... | _ | _ = {!!}
+
+
+{-
+splitV1 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (as : Digit A v n) → V
+splitV1 p i (One a) = ∅
+splitV1 p i (Two {v1} a b) = splitV1 {!!} {!!} (One b)
+splitV1 p i (Three {v1} {v2} a b c) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2)
+... | true | _ = ∅
+... | _ | true = v1
+... | _ | _ = v1 ⊕ v2
+splitV1 p i (Four {v1} {v2} {v3} a b c d) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2) | p (((i ⊕ v1) ⊕ v2) ⊕ v3)
+... | true | _ | _ = ∅
+... | _ | true | _ = v1
+... | _ | _ | true = v1 ⊕ v2
+... | _ | _ | _ = (v1 ⊕ v2) ⊕ v3
+-}
+{-
+splitV2 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (as : Digit A v n) → V
+splitV2 p i (One {v} a) = v
+splitV2 p i (Two {v1} {v2} a b) with p (i ⊕ v1)
+... | true = v1
+... | false = v2
+splitV2 p i (Three {v1} {v2} {v3} a b c) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2)
+... | true | _ = v1
+... | _ | true = v1 ⊕ v2
+... | _ | _ = v3
+splitV2 p i (Four {v1} {v2} {v3} {v4} a b c d) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2) | p (((i ⊕ v1) ⊕ v2) ⊕ v3)
+... | true | _ | _ = v1
+... | _ | true | _ = v1 ⊕ v2
+... | _ | _ | true = (v1 ⊕ v2) ⊕ v3
+... | _ | _ | _ = v4
+
+splitV3 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (as : Digit A v n) → V
+splitV3 p i (One a) = ∅
+splitV3 p i (Two {v1} {v2} a b) with p (i ⊕ v1)
+... | true = v2
+... | false = ∅
+splitV3 p i (Three {v1} {v2} {v3} a b c) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2)
+... | true | _ = v2 ⊕ v3
+... | _ | true = v3
+... | _ | _ = ∅
+splitV3 p i (Four {v1} {v2} {v3} {v4} a b c d) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2) | p (((i ⊕ v1) ⊕ v2) ⊕ v3)
+... | true | _ | _ = v2 ⊕ (v3 ⊕ v4)
+... | _ | true | _ = v3 ⊕ v4
+... | _ | _ | true = v4
+... | _ | _ | _ = ∅
+-}
+{-
+splitDigit : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (as : Digit A v n) → Split (λ _ → NodeList A (splitV1 p i as) n) (Node A (splitV2 p i as) n) (λ _ → NodeList A (splitV3 p i as) n)
+splitDigit p i (One a) = split [] a []
+splitDigit p i (Two {v1} a b) with p (i ⊕ v1)
+... | true = split [] a (b ∷ [])
+... | false = (λ {split l x r → split (a ∷ l) x r}) splitDigit p (_⊕_ i v1) (One b)
+splitDigit p i (Three {v1} a b c) with p (i ⊕ v1)
+... | true = split [] a (b ∷ c ∷ [])
+... | false = (λ {split l x r → split (a ∷ l) x r}) splitDigit p (_⊕_ i v1) (Two b c)
+splitDigit p i (Four {v1} a b c d) with p (i ⊕ v1)
+... | true = split [] a (b ∷ c ∷ d ∷ [])
+... | false = (λ {split l x r → split (a ∷ l) x r}) splitDigit p (_⊕_ i v1) (Three b c d)
+
+
+
+splitTree : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {{mea : Measured A V}} {n : ℕ} (p : V → Bool) (i : V) (ft : FingerTree A v n) → Split (λ A → FingerTree A _ n) (Node A _ n) (λ A → FingerTree A _ n)
+splitTree p i Empty = {!!}
+splitTree p i (Single x) = split Empty x Empty
+splitTree p i (Deep {v1} {v2} pr m sf) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2)
+... | true | _ = (λ { split l x r → split {!(digitToTree l)!} x {!r!} }) splitDigit p i pr
+... | _ | true = {!(λ { split l x r → split (digitToTree l) x {!!} }) splitDigit p i pr!}
+... | _ | _ = {!!}
+-}
