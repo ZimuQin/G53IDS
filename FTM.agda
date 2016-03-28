@@ -813,13 +813,465 @@ data Split (F1 : Set → Set) (A : Set) (F2 : Set → Set) : Set where
 getNodeV : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (node : Node A v n) → V
 getNodeV {v = v} _ = v
 
-splitTree : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (ft : FingerTree A v n) {le : isEmpty ft ≡ false} → Split (λ _ → FingerTree A _ n) (Node A _ n) (λ _ → FingerTree A _ n)
+getDigitV : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (d : Digit A v n) → V
+getDigitV {v = v} _ = v
+
+splitV1 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (as : Digit A v n) → V
+splitV1 p i (One a) = ∅
+splitV1 p i (Two {v1} a b) with p (i ⊕ v1)
+... | true = ∅
+... | false = v1
+splitV1 p i (Three {v1} {v2} a b c) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2)
+... | true | _ = ∅
+... | false | true = v1
+... | false | false = v1 ⊕ v2
+splitV1 p i (Four {v1} {v2} {v3} a b c d) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2) | p (((i ⊕ v1) ⊕ v2) ⊕ v3)
+... | true | _ | _ = ∅
+... | false | true | _ = v1
+... | false | false | true = v1 ⊕ v2
+... | false | false | false = (v1 ⊕ v2) ⊕ v3
+
+splitV2 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (as : Digit A v n) → V
+splitV2 p i (One {v} a) = v
+splitV2 p i (Two {v1} {v2} a b) with p (i ⊕ v1)
+... | true = v1
+... | false = v2
+splitV2 p i (Three {v1} {v2} {v3} a b c) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2)
+... | true | _ = v1
+... | false | true = v2
+... | false | false = v3
+splitV2 p i (Four {v1} {v2} {v3} {v4} a b c d) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2) | p (((i ⊕ v1) ⊕ v2) ⊕ v3)
+... | true | _ | _ = v1
+... | false | true | _ = v2
+... | false | false | true = v3
+... | false | false | false = v4
+
+splitV3 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (as : Digit A v n) → V
+splitV3 p i (One a) = ∅
+splitV3 p i (Two {v1} {v2} a b) with p (i ⊕ v1)
+... | true = v2
+... | false = ∅
+splitV3 p i (Three {v1} {v2} {v3} a b c) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2)
+... | true | _ = v2 ⊕ v3
+... | _ | true = v3
+... | _ | _ = ∅
+splitV3 p i (Four {v1} {v2} {v3} {v4} a b c d) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2) | p (((i ⊕ v1) ⊕ v2) ⊕ v3)
+... | true | _ | _ = (v2 ⊕ v3) ⊕ v4
+... | _ | true | _ = v3 ⊕ v4
+... | _ | _ | true = v4
+... | _ | _ | _ = ∅
+
+data NDigit {V : Set} {{m : Monoid V}} (A : Set) : V → ℕ → Set where
+  Zero : {n : ℕ} → NDigit A ∅ n
+  One : {v : V} {n : ℕ} → Node A v n → NDigit A v n
+  Two : {v1 v2 : V} {n : ℕ} → Node A v1 n → Node A v2 n → NDigit A (v1 ⊕ v2) n
+  Three : {v1 v2 v3 : V} {n : ℕ} → Node A v1 n → Node A v2 n → Node A v3 n → NDigit A ((v1 ⊕ v2) ⊕ v3) n
+  Four : {v1 v2 v3 v4 : V} {n : ℕ} → Node A v1 n → Node A v2 n → Node A v3 n → Node A v4 n → NDigit A (((v1 ⊕ v2) ⊕ v3) ⊕ v4) n
+
+deepL : {V : Set} {{m : Monoid V}} {A : Set} {v1 v2 v3 : V} {n : ℕ} → NDigit A v1 n → FingerTree A v2 (suc n) → Digit A v3 n → FingerTree A ((v1 ⊕ v2) ⊕ v3) n
+deepL Zero Empty sf = substFingerTree lemma (digitToTree sf)
+      where lemma : {V : Set} {{m : Monoid V}} {v : V} → v ≡ _⊕_ (_⊕_ ∅ ∅) v
+            lemma {_} {v} = begin
+                      v ≡⟨ id2 v ⟩
+                      _⊕_ ∅ v ≡⟨ cong (flip _⊕_ v) (id1 ∅) ⟩ _⊕_ (_⊕_ ∅ ∅) v ∎
+deepL Zero (Single x) sf = substFingerTree lemma (Deep (nodeToDigit x) Empty sf)
+      where lemma : {V : Set} {{m : Monoid V}} {v1 v2 : V} → _⊕_ (_⊕_ v1 ∅) v2 ≡ _⊕_ (_⊕_ ∅ v1) v2
+            lemma {_} {v1} {v2} = begin
+                                    _⊕_ (_⊕_ v1 ∅) v2 ≡⟨ cong (flip _⊕_ v2) (sym (id1 v1)) ⟩
+                                    _⊕_ v1 v2 ≡⟨ cong (flip _⊕_ v2) (id2 v1) ⟩ _⊕_ (_⊕_ ∅ v1) v2 ∎
+deepL Zero (Deep pr m sf) sf2 with headL (Deep pr m sf) | inspect headL (Deep pr m sf)
+... | nothing | [ () ]
+... | just x  | _ = substFingerTree (lemma {pr = pr})
+                     (Deep (nodeToDigit x) (tailL (Deep pr m sf)) sf2)
+      where lemma : {A : Set} {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 : V} {pr : Digit A v1 _} →
+                    _⊕_ (_⊕_ (headDigitV pr) (_⊕_ (_⊕_ (tailDigitV pr) v2) v3)) v4 ≡ _⊕_ (_⊕_ ∅ (_⊕_ (_⊕_ v1 v2) v3)) v4
+            lemma {v1 = v1} {v2} {v3} {v4} {pr} = begin
+                      _⊕_ (_⊕_ (headDigitV pr) (_⊕_ (_⊕_ (tailDigitV pr) v2) v3)) v4 ≡⟨
+                      cong (flip _⊕_ v4)
+                      (sym (assoc (headDigitV pr) (_⊕_ (tailDigitV pr) v2) v3))
+                      ⟩
+                      _⊕_ (_⊕_ (_⊕_ (headDigitV pr) (_⊕_ (tailDigitV pr) v2)) v3) v4 ≡⟨
+                      cong (λ v → _⊕_ (_⊕_ v v3) v4)
+                      (sym (assoc (headDigitV pr) (tailDigitV pr) v2))
+                      ⟩
+                      _⊕_ (_⊕_ (_⊕_ (_⊕_ (headDigitV pr) (tailDigitV pr)) v2) v3) v4 ≡⟨
+                      cong (λ v → _⊕_ (_⊕_ (_⊕_ v v2) v3) v4) (lemma6 pr) ⟩
+                      _⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4 ≡⟨
+                      cong (flip _⊕_ v4) (id2 (_⊕_ (_⊕_ v1 v2) v3)) ⟩
+                      _⊕_ (_⊕_ ∅ (_⊕_ (_⊕_ v1 v2) v3)) v4 ∎
+deepL (One a) m sf = Deep (One a) m sf
+deepL (Two a b) m sf = Deep (Two a b) m sf
+deepL (Three a b c) m sf = Deep (Three a b c) m sf
+deepL (Four a b c d) m sf = Deep (Four a b c d) m sf
+{-
+tailR : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (ft : FingerTree A v n) → FingerTree A (initV ft) n
+tailR Empty = Empty
+tailR (Single x) = Empty
+tailR (Deep pr Empty (One a)) = substFingerTree lemma (digitToTree pr)
+      where lemma : {V : Set} {{m : Monoid V}} {v : V} → v ≡ _⊕_ (_⊕_ v ∅) ∅
+            lemma {_} {v} = begin
+                      v ≡⟨ id1 v ⟩
+                      _⊕_ v ∅ ≡⟨ id1 (_⊕_ v ∅) ⟩ _⊕_ (_⊕_ v ∅) ∅ ∎
+tailR (Deep pr (Single x) (One a)) = substFingerTree lemma (Deep pr Empty (nodeToDigit x))
+      where lemma : {V : Set} {{m : Monoid V}} {v1 v2 : V} → _⊕_ (_⊕_ v1 ∅) v2 ≡ _⊕_ (_⊕_ v1 v2) ∅
+            lemma {_} {v1} {v2} = begin
+                                    _⊕_ (_⊕_ v1 ∅) v2 ≡⟨ cong (flip _⊕_ v2) (sym (id1 v1)) ⟩
+                                    _⊕_ v1 v2 ≡⟨ id1 (_⊕_ v1 v2) ⟩ _⊕_ (_⊕_ v1 v2) ∅ ∎
+tailR (Deep pr2 (Deep pr m sf) (One a)) with headR (Deep pr m sf) | inspect headR (Deep pr m sf)
+... | nothing | [ () ]
+... | just x  | _ = substFingerTree (lemma {sf = sf}) (Deep pr2 (tailR (Deep pr m sf)) (nodeToDigit x))
+      where lemma : {A : Set} {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 : V} {sf : Digit A v4 _} →
+                    _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) (initDigitV sf))) (lastDigitV sf) ≡ _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4)) ∅
+            lemma {v1 = v1} {v2} {v3} {v4} {sf} = begin _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) (initDigitV sf))) (lastDigitV sf) ≡⟨
+                                                        assoc v1 (_⊕_ (_⊕_ v2 v3) (initDigitV sf)) (lastDigitV sf)
+                                                        ⟩ _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) (initDigitV sf)) (lastDigitV sf)) ≡⟨
+                                                        cong (_⊕_ v1) (assoc (_⊕_ v2 v3) (initDigitV sf) (lastDigitV sf))
+                                                        ⟩ _⊕_ v1 (_⊕_ (_⊕_ v2 v3) (_⊕_ (initDigitV sf) (lastDigitV sf))) ≡⟨
+                                                        cong (λ vx → _⊕_ v1 (_⊕_ (_⊕_ v2 v3) vx)) (lemma7 sf)
+                                                        ⟩ _⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4) ≡⟨ id1 (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4))
+                                                        ⟩ _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4)) ∅ ∎
+tailR (Deep pr m (Two b a)) = Deep pr m (One b)
+tailR (Deep pr m (Three c b a)) = Deep pr m (Two c b)
+tailR (Deep pr m (Four d c b a)) = Deep pr m (Three d c b)
+-}
+deepR : {V : Set} {{m : Monoid V}} {A : Set} {v1 v2 v3 : V} {n : ℕ} → Digit A v1 n → FingerTree A v2 (suc n) → NDigit A v3 n → FingerTree A ((v1 ⊕ v2) ⊕ v3) n
+deepR pr Empty Zero = substFingerTree lemma (digitToTree pr)
+      where lemma : {V : Set} {{m : Monoid V}} {v : V} → v ≡ _⊕_ (_⊕_ v ∅) ∅
+            lemma {_} {v} = begin
+                      v ≡⟨ id1 v ⟩
+                      _⊕_ v ∅ ≡⟨ id1 (_⊕_ v ∅) ⟩ _⊕_ (_⊕_ v ∅) ∅ ∎
+deepR pr (Single x) Zero = substFingerTree lemma (Deep pr Empty (nodeToDigit x))
+      where lemma : {V : Set} {{m : Monoid V}} {v1 v2 : V} → _⊕_ (_⊕_ v1 ∅) v2 ≡ _⊕_ (_⊕_ v1 v2) ∅
+            lemma {_} {v1} {v2} = begin
+                                    _⊕_ (_⊕_ v1 ∅) v2 ≡⟨ cong (flip _⊕_ v2) (sym (id1 v1)) ⟩
+                                    _⊕_ v1 v2 ≡⟨ id1 (_⊕_ v1 v2) ⟩ _⊕_ (_⊕_ v1 v2) ∅ ∎
+deepR pr2 (Deep pr m sf) Zero with headR (Deep pr m sf) | inspect headR (Deep pr m sf)
+... | nothing | [ () ]
+... | just x  | _ = substFingerTree (lemma {sf = sf}) (Deep pr2 (tailR (Deep pr m sf)) (nodeToDigit x))
+      where lemma : {A : Set} {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 : V} {sf : Digit A v4 _} →
+                    _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) (initDigitV sf))) (lastDigitV sf) ≡ _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4)) ∅
+            lemma {v1 = v1} {v2} {v3} {v4} {sf} = begin _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) (initDigitV sf))) (lastDigitV sf) ≡⟨
+                                                        assoc v1 (_⊕_ (_⊕_ v2 v3) (initDigitV sf)) (lastDigitV sf)
+                                                        ⟩ _⊕_ v1 (_⊕_ (_⊕_ (_⊕_ v2 v3) (initDigitV sf)) (lastDigitV sf)) ≡⟨
+                                                        cong (_⊕_ v1) (assoc (_⊕_ v2 v3) (initDigitV sf) (lastDigitV sf))
+                                                        ⟩ _⊕_ v1 (_⊕_ (_⊕_ v2 v3) (_⊕_ (initDigitV sf) (lastDigitV sf))) ≡⟨
+                                                        cong (λ vx → _⊕_ v1 (_⊕_ (_⊕_ v2 v3) vx)) (lemma7 sf)
+                                                        ⟩ _⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4) ≡⟨ id1 (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4))
+                                                        ⟩ _⊕_ (_⊕_ v1 (_⊕_ (_⊕_ v2 v3) v4)) ∅ ∎
+deepR pr m (One a) = Deep pr m (One a)
+deepR pr m (Two a b) = Deep pr m (Two a b)
+deepR pr m (Three a b c) = Deep pr m (Three a b c)
+deepR pr m (Four a b c d) = Deep pr m (Four a b c d)
+
+nDigitToTree : {V : Set} {{m : Monoid V}} {A : Set} {n : ℕ} {v : V} → NDigit A v n → FingerTree A v n
+nDigitToTree Zero = Empty
+nDigitToTree (One x) = Single x
+nDigitToTree (Two a b) = substFingerTree (cong (flip _⊕_ _) (sym (id1 _))) (Deep (One a) Empty (One b))
+nDigitToTree (Three a b c) = substFingerTree (cong (flip _⊕_ _) (sym (id1 _))) (Deep (Two a b) Empty (One c))
+nDigitToTree (Four a b c d) = substFingerTree lemma (Deep (Two a b) Empty (Two c d))
+            where lemma : {V : Set} {{m : Monoid V}} {v1 v2 v3 v4 : V} → _⊕_ (_⊕_ (_⊕_ v1 v2) ∅) (_⊕_ v3 v4) ≡ _⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4
+                  lemma {_} {v1} {v2} {v3} {v4} = begin
+                                                    _⊕_ (_⊕_ (_⊕_ v1 v2) ∅) (_⊕_ v3 v4) ≡⟨
+                                                    cong (flip _⊕_ (_⊕_ v3 v4)) (sym (id1 (_⊕_ v1 v2))) ⟩
+                                                    _⊕_ (_⊕_ v1 v2) (_⊕_ v3 v4) ≡⟨ sym (assoc (_⊕_ v1 v2) v3 v4) ⟩
+                                                    _⊕_ (_⊕_ (_⊕_ v1 v2) v3) v4 ∎
+
+splitDigit : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (as : Digit A v n) → Split (λ _ → NDigit A (splitV1 p i as) n) (Node A (splitV2 p i as) n) (λ _ → NDigit A (splitV3 p i as) n)
+splitDigit p i (One a) = split Zero a Zero
+splitDigit p i (Two {v1} a b) with p (i ⊕ v1)
+... | true = split Zero a (One b)
+... | false = split (One a) b Zero
+splitDigit p i (Three {v1} {v2} a b c) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2)
+... | true | _ = split Zero a (Two b c)
+... | false | true = split (One a) b (One c)
+... | false | false = split (Two a b) c Zero
+splitDigit p i (Four {v1} {v2} {v3} a b c d) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2) | p (((i ⊕ v1) ⊕ v2) ⊕ v3)
+... | true | _ | _ = split Zero a (Three b c d)
+... | false | true | _ = split (One a) b (Two c d)
+... | false | false | true = split (Two a b) c (One d)
+... | false | false | false = split (Three a b c) d Zero
+
+splitNodeV1 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (node : Node A v (suc n)) → V
+splitNodeV1 p i (Node2 a b) = splitV1 p i (Two a b)
+splitNodeV1 p i (Node3 a b c) = splitV1 p i (Three a b c)
+
+splitNodeV2 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (node : Node A v (suc n)) → V
+splitNodeV2 p i (Node2 a b) = splitV2 p i (Two a b)
+splitNodeV2 p i (Node3 a b c) = splitV2 p i (Three a b c)
+
+splitNodeV3 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (node : Node A v (suc n)) → V
+splitNodeV3 p i (Node2 a b) = splitV3 p i (Two a b)
+splitNodeV3 p i (Node3 a b c) = splitV3 p i (Three a b c)
+
+splitNode : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (node : Node A v (suc n)) → Split (λ _ → NDigit A (splitNodeV1 p i node) n) (Node A (splitNodeV2 p i node) n) (λ _ → NDigit A (splitNodeV3 p i node) n)
+splitNode p i (Node2 a b) = splitDigit p i (Two a b)
+splitNode p i (Node3 a b c) = splitDigit p i (Three a b c)
+
+{-
+splitDigit : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (as : Digit A v n) → Split (λ _ → NodeList A (splitV1 p i as) n) (Node A (splitV2 p i as) n) (λ _ → NodeList A (splitV3 p i as) n)
+splitDigit p i (One a) = split [] a []
+splitDigit p i (Two {v1} {v2} a b) with p (i ⊕ v1)
+... | true = split [] a (substNodeList (sym (id1 v2)) (b ∷ []))
+... | false = split (substNodeList (sym (id1 v1)) (a ∷ [])) b []
+splitDigit p i (Three {v1} {v2} {v3} a b c) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2)
+... | true | _ = split [] a (substNodeList (cong (_⊕_ v2) (sym (id1 v3))) (b ∷ c ∷ []))
+... | false | true = split (substNodeList (sym (id1 v1)) (a ∷ [])) b (substNodeList (sym (id1 v3)) (c ∷ []))
+... | false | false = split (substNodeList (cong (_⊕_ v1) (sym (id1 v2))) (a ∷ b ∷ [])) c []
+splitDigit p i (Four {v1} {v2} {v3} {v4} a b c d) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2) | p (((i ⊕ v1) ⊕ v2) ⊕ v3)
+... | true | _ | _ = split [] a (substNodeList (trans (cong (λ v → _⊕_ v2 (_⊕_ v3 v)) (sym (id1 v4))) (sym (assoc v2 v3 v4))) (b ∷ c ∷ d ∷ []))
+... | false | true | _ = split (substNodeList (sym (id1 v1)) (a ∷ [])) b (substNodeList (cong (_⊕_ v3) (sym (id1 v4))) (c ∷ d ∷ []))
+... | false | false | true = split (substNodeList (cong (_⊕_ v1) (sym (id1 v2))) (a ∷ b ∷ [])) c (substNodeList (sym (id1 v4)) (d ∷ []))
+... | false | false | false = split (substNodeList (trans (cong (λ v → _⊕_ v1 (_⊕_ v2 v)) (sym (id1 v3))) (sym (assoc v1 v2 v3))) (a ∷ b ∷ c ∷ [])) d []
+-}
+
+
+
+
+splitTreeV1 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (ft : FingerTree A v n) → V
+splitTreeV2 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (ft : FingerTree A v n) → V
+splitTreeV3 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (ft : FingerTree A v n) → V
+splitTree : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (ft : FingerTree A v n) {le : isEmpty ft ≡ false} → Split (λ _ → FingerTree A (splitTreeV1 p i ft) n) (Node A (splitTreeV2 p i ft) n) (λ _ → FingerTree A (splitTreeV3 p i ft) n)
+
+splitTreeV1 p i Empty = ∅
+splitTreeV1 p i (Single x) = ∅
+splitTreeV1 p i (Deep {v1} pr Empty sf) with p (i ⊕ v1)
+... | true = splitV1 p i pr
+... | false = _⊕_ v1 (splitV1 p (_⊕_ i v1) sf)
+splitTreeV1 p i (Deep {v1} {v2} {v3} pr (Single x) sf) with p (i ⊕ v1)
+... | true = splitV1 p i pr
+... | false with p ((i ⊕ v1) ⊕ v2)
+...  | true = _⊕_ v1 (splitV1 p (_⊕_ i v1) (nodeToDigit x))
+...  | false = _⊕_ (_⊕_ v1 v2) (splitV1 p (_⊕_ (_⊕_ i v1) v2) sf) 
+splitTreeV1 p i (Deep {v1} pr (Deep pr2 m sf2) sf) with p (i ⊕ v1)
+... | true = splitV1 p i pr
+... | false with p ((i ⊕ v1) ⊕ getV (Deep pr2 m sf2))
+...  | true with splitTree p (i ⊕ v1) (Deep pr2 m sf2) {refl}
+...   | split l xs r = _⊕_ (_⊕_ v1 (getV l)) (splitV1 p (_⊕_ (_⊕_ i v1) (getV l)) (nodeToDigit xs))
+splitTreeV1 p i (Deep {v1} pr (Deep pr2 m sf2) sf) | false | false = _⊕_ (_⊕_ v1 (getV (Deep pr2 m sf2))) (splitV1 p (_⊕_ (_⊕_ i v1) (getV (Deep pr2 m sf2))) sf)
+
+splitTreeV2 p i Empty = ∅
+splitTreeV2 p i (Single {v} x) = v
+splitTreeV2 p i (Deep {v1} pr Empty sf) with p (i ⊕ v1)
+... | true = splitV2 p i pr
+... | false = splitV2 p (_⊕_ i v1) sf
+splitTreeV2 p i (Deep {v1} {v2} pr (Single x) sf) with p (i ⊕ v1)
+... | true = splitV2 p i pr
+... | false with p ((i ⊕ v1) ⊕ v2)
+...  | true = splitV2 p (_⊕_ i v1) (nodeToDigit x)
+...  | false = splitV2 p (_⊕_ (_⊕_ i v1) v2) sf 
+splitTreeV2 p i (Deep {v1} pr (Deep pr2 m sf2) sf) with p (i ⊕ v1)
+... | true = splitV2 p i pr
+... | false with p ((i ⊕ v1) ⊕ getV (Deep pr2 m sf2))
+...  | true with splitTree p (i ⊕ v1) (Deep pr2 m sf2) {refl}
+...   | split l xs r = splitV2 p (_⊕_ (_⊕_ i v1) (getV l)) (nodeToDigit xs)
+splitTreeV2 p i (Deep {v1} pr (Deep pr2 m sf2) sf) | false | false = splitV2 p (_⊕_ (_⊕_ i v1) (getV (Deep pr2 m sf2))) sf
+
+splitTreeV3 p i Empty = ∅
+splitTreeV3 p i (Single x) = ∅
+splitTreeV3 p i (Deep {v1} {_} {v3} pr Empty sf) with p (i ⊕ v1)
+... | true = _⊕_ (splitV3 p i pr) v3
+... | false = splitV3 p (_⊕_ i v1) sf
+splitTreeV3 p i (Deep {v1} {v2} {v3} pr (Single x) sf) with p (i ⊕ v1)
+... | true = _⊕_ (_⊕_ (splitV3 p i pr) v2) v3
+... | false with p ((i ⊕ v1) ⊕ v2)
+...  | true = _⊕_ (splitV3 p (_⊕_ i v1) (nodeToDigit x)) v3
+...  | false = splitV3 p (_⊕_ (_⊕_ i v1) v2) sf 
+splitTreeV3 p i (Deep {v1} {_} {v3} pr (Deep pr2 m sf2) sf) with p (i ⊕ v1)
+... | true = _⊕_ (_⊕_ (splitV3 p i pr) (getV (Deep pr2 m sf2))) v3
+... | false with p ((i ⊕ v1) ⊕ (getV (Deep pr2 m sf2)))
+...  | true with splitTree p (i ⊕ v1) (Deep pr2 m sf2) {refl}
+...   | split l xs r = _⊕_
+                         (_⊕_ (splitV3 p (_⊕_ (_⊕_ i v1) (getV l)) (nodeToDigit xs))
+                          (getV r))
+                         v3
+splitTreeV3 p i (Deep {v1} pr (Deep pr2 m sf2) sf) | false | false = splitV3 p (_⊕_ (_⊕_ i v1) (getV (Deep pr2 m sf2))) sf
+
 splitTree p i Empty {}
 splitTree p i (Single x) = split Empty x Empty
-splitTree p i (Deep {v1} {v2} pr m sf) with p (i ⊕ v1) | p ((i ⊕ v1) ⊕ v2) | splitTree p (i ⊕ v1) m
-... | true | _ | _ = {!!}
-... | _ | true | split t1 x t2 = {!!}
-... | _ | _ | _ = {!!}
+splitTree p i (Deep {v1} pr Empty sf) with p (i ⊕ v1)
+... | true with splitDigit p i pr
+...  | split l x r = split (nDigitToTree l) x (substFingerTree (cong (λ x₁ → _⊕_ x₁ _) (sym (id1 _))) (deepL r Empty sf))
+splitTree p i (Deep {v1} pr Empty sf) | false with splitDigit p (_⊕_ i v1) sf
+...  | split l x r = split (substFingerTree (cong (λ x₁ → _⊕_ x₁ (splitV1 p (_⊕_ i v1) sf)) (sym (id1 v1))) (deepR pr Empty l)) x (nDigitToTree r)
+splitTree p i (Deep {v1} {v2} pr (Single a) sf) with p (i ⊕ v1)
+... | true with splitDigit p i pr
+...  | split l x r = split (nDigitToTree l) x (deepL r (Single a) sf)
+splitTree p i (Deep {v1} {v2} pr (Single a) sf) | false with p ((i ⊕ v1) ⊕ v2)
+... | true with splitDigit p (_⊕_ i v1) (nodeToDigit a)
+...  | split l x r = split (substFingerTree (cong (λ x₁ → _⊕_ x₁ (splitV1 p (_⊕_ i v1) (nodeToDigit a)))
+                                               (sym (id1 v1))) (deepR pr Empty l)) x (substFingerTree (cong (λ x₁ → _⊕_ x₁ _) (sym (id1 _))) (deepL r Empty sf))
+splitTree p i (Deep {v1} {v2} pr (Single a) sf) | false | false with splitDigit p ((i ⊕ v1) ⊕ v2) sf
+...  | split l x r = split (deepR pr (Single a) l) x (nDigitToTree r)
+splitTree p i (Deep {v1} pr (Deep pr2 m sf2) sf) with p (i ⊕ v1)
+... | true with splitDigit p i pr
+...  | split l x r = split (nDigitToTree l) x (deepL r (Deep pr2 m sf2) sf)
+splitTree p i (Deep {v1} pr (Deep pr2 m sf2) sf) | false with p ((i ⊕ v1) ⊕ (getV (Deep pr2 m sf2)))
+...  | true with splitTree p (i ⊕ v1) (Deep pr2 m sf2) {refl}
+...   | split ml xs mr with splitDigit p (_⊕_ (_⊕_ i v1) (getV ml)) (nodeToDigit xs)
+...     | split l x r = split (deepR pr ml l) x (deepL r mr sf)
+splitTree p i (Deep {v1} pr (Deep pr2 m sf2) sf) | false | false with splitDigit p (_⊕_ (_⊕_ i v1) (getV (Deep pr2 m sf2))) sf
+... | split l x r = split (deepR pr (Deep pr2 m sf2) l) x (nDigitToTree r)
+
+open import Data.Product
+split′V1 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (ft : FingerTree A v n) → V
+split′V1 p Empty = ∅
+split′V1 {_} {v} p t with p v
+... | true = splitTreeV1 p ∅ t
+... | false = v
+
+split′V2 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (ft : FingerTree A v n) → V
+split′V2 p Empty = ∅
+split′V2 {_} {v} p t with p v
+... | true = splitTreeV2 p ∅ t ⊕ splitTreeV3 p ∅ t
+... | false = ∅
+
+split′ : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (ft : FingerTree A v n) → FingerTree A (split′V1 p ft) n × FingerTree A (split′V2 p ft) n
+split′ p Empty = Empty , Empty
+split′ p (Single {v} x) with p v
+... | true = Empty , substFingerTree (id1 v) (Single x)
+... | false = Single x , Empty
+split′ p (Deep pr m sf) with splitTree p ∅ (Deep pr m sf) {refl}
+... | split l x r with p (getV (Deep pr m sf))
+...  | true = l , x ◁ r
+...  | false = Deep pr m sf , Empty
+
+takeUntil : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (ft : FingerTree A v n) → FingerTree A (split′V1 p ft) n
+takeUntil p t = proj₁ (split′ p t)
+
+dropUntil : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (ft : FingerTree A v n) → FingerTree A (split′V2 p ft) n
+dropUntil p t = proj₂ (split′ p t)
+
+
+_<<_ : ℕ → ℕ → Bool
+zero  << zero  = false
+zero  << suc n = true
+suc m << zero  = false
+suc m << suc n = m << n
+
+lemma<< : (x y z : ℕ) → (x << y ≡ true) → (y << z ≡ true) → (x << z ≡ true)
+lemma<< zero zero _ ()
+lemma<< (suc x) zero _ ()
+lemma<< _ (suc y) zero _ ()
+lemma<< zero (suc y) (suc z) refl le2 = refl
+lemma<< (suc x) (suc y) (suc z) le1 le2 = lemma<< x y z le1 le2
+
+lemma2<< : (x y z : ℕ) → (x << y ≡ false) → (y << z ≡ false) → (x << z ≡ false)
+lemma2<< zero zero zero _ _ = refl
+lemma2<< zero zero (suc _) _ ()
+lemma2<< zero (suc _) _ ()
+lemma2<< (suc x) zero zero eq eq2 = refl
+lemma2<< (suc x) zero (suc z) eq ()
+lemma2<< (suc x) (suc y) zero eq eq2 = refl
+lemma2<< (suc x) (suc y) (suc z) eq eq2 = lemma2<< x y z eq eq2
+
+splitAt : {v : ℕ} {A : Set} {n : ℕ} (i : ℕ) (ft : FingerTree {{monoidSize}} A v n) → FingerTree {{monoidSize}} A (split′V1 {{monoidSize}} (_<<_ i) ft) n × FingerTree {{monoidSize}} A (split′V2 {{monoidSize}} (_<<_ i) ft) n
+splitAt i = split′ {{monoidSize}} (_<<_ i)
+
+open import Data.Empty
+
+lele : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (ft : FingerTree A v n) → v ≢ ∅ → isEmpty ft ≡ false
+lele Empty le = ⊥-elim (le refl)
+lele (Single _) le = refl
+lele (Deep _ _ _) le = refl
+
+suc_neq_zero : (n : ℕ) → suc n ≢ zero
+suc_neq_zero n ()
+
+_!_ : {v : ℕ} {A : Set} (ft : FingerTree {{monoidSize}} A (suc v) zero) (i : ℕ) → A
+_!_ {v} t i with splitTree {{monoidSize}} (_<<_ i) 0 t {lele t (suc_neq_zero v)}
+... | split _ (Leaf x) _ = x
+
+data Prio (A : Set) : Set where
+  mInfty : Prio A
+  prio : (a : A) → Prio A
+
+false_neq_true : false ≢ true
+false_neq_true ()
+
+monoidPrio : Monoid (Prio ℕ)
+monoidPrio = record { ∅ = mInfty ; _⊕_ = _⊕′_ ;
+                          isMonoid = record { id1 = id1′ ; id2 = λ _ → refl ; assoc = assoc′ }}
+                                      where
+                                              _⊕′_ : Prio ℕ → Prio ℕ → Prio ℕ
+                                              mInfty ⊕′ p = p
+                                              p ⊕′ mInfty = p
+                                              prio m ⊕′ prio n with m << n
+                                              ... | true  = prio n
+                                              ... | false = prio m
+                                              
+                                              id1′ : (x : Prio ℕ) → x ≡ x ⊕′ mInfty
+                                              id1′ mInfty = refl
+                                              id1′ (prio _) = refl
+                                              
+                                              assoc′ : (x y z : Prio ℕ) → (x ⊕′ y) ⊕′ z ≡ x ⊕′ (y ⊕′ z)
+                                              assoc′ mInfty y z = refl
+                                              assoc′ x mInfty z = cong (λ v → v ⊕′ z) (sym (id1′ x))
+                                              assoc′ x y mInfty = trans (sym (id1′ (x ⊕′ y))) (cong (_⊕′_ x) (id1′ y))
+                                              assoc′ (prio x) (prio y) (prio z) with (_<<_ x) y | inspect (_<<_ x) y
+                                              ... | true | [ eq ] with y << z | inspect (_<<_ y) z
+                                              ...  | true | [ eq2 ] with x << z | inspect (_<<_ x) z
+                                              ...   | true | _ = refl
+                                              ...   | false | [ eq3 ] = ⊥-elim (false_neq_true (trans (sym eq3) (lemma<< x y z eq eq2)))
+                                              assoc′ (prio x) (prio y) (prio z) | true | [ eq ] | false | _ with x << y
+                                              ...   | true = refl
+                                              ...   | false = ⊥-elim (false_neq_true eq)
+                                              assoc′ (prio x) (prio y) (prio z) | false | [ eq ] with y << z | inspect (_<<_ y) z
+                                              ... | true | _ = refl
+                                              ... | false | [ eq2 ] with x << z | inspect (_<<_ x) z
+                                              ...  | true | [ eq3 ] = ⊥-elim (false_neq_true (trans (sym (lemma2<< x y z eq eq2)) eq3))
+                                              ...  | false | _ with x << y
+                                              ...   | true = ⊥-elim (false_neq_true (sym eq))
+                                              ...   | false = refl
+
+measuredPrio : Measured ℕ ℕ
+measuredPrio = record { measure = λ x → x }
+
+_<=_ : ℕ → ℕ → Bool
+zero <= b = true
+suc a <= zero = false
+suc a <= suc b = a <= b
+
+_<<=_ : Prio ℕ → Prio ℕ → Bool
+mInfty <<= _ = true
+prio a <<= mInfty = false
+prio a <<= prio b = a <= b
+
+extractMax : {v : Prio ℕ} (ft : FingerTree {{monoidPrio}} ℕ v zero) → Maybe (ℕ × FingerTree {{monoidPrio}} ℕ (_⊕_ {{monoidPrio}}
+                                                                                                                (splitTreeV1 {{monoidPrio}} (_<<=_ v) mInfty ft)
+                                                                                                                (splitTreeV3 {{monoidPrio}} (_<<=_ v) mInfty ft)) zero)
+extractMax Empty = nothing
+extractMax (Single (Leaf x)) = just (x , substFingerTree {{monoidPrio}} (id1 {{monoidPrio}} mInfty) Empty)
+extractMax (Deep pr m sf) with splitTree {{monoidPrio}} (_<<=_ (getV (Deep pr m sf))) mInfty (Deep pr m sf) {refl}
+... | split l (Leaf x) r = just (x , l ⋈ r)
+
+data Key (A : Set) : Set where
+  noKey : Key A
+  key : (a : A) → Key A
+
+monoidKey : {A : Set} → Monoid (Key A)
+monoidKey {A} = record { ∅ = noKey ; _⊕_ = _⊕′_ ;
+                          isMonoid = record { id1 = λ _ → refl ; id2 = id2′ ; assoc = assoc′ }}
+                                      where
+                                        _⊕′_ : Key A → Key A → Key A
+                                        k ⊕′ noKey = k
+                                        _ ⊕′ k = k
+                                        id2′ : (x : Key A) → x ≡ noKey ⊕′ x
+                                        id2′ noKey = refl
+                                        id2′ (key _) = refl
+                                        assoc′ : (x y z : Key A) → (x ⊕′ y) ⊕′ z ≡ x ⊕′ (y ⊕′ z)
+                                        assoc′ x y noKey = refl
+                                        assoc′ x y (key a) = refl
+
+
+  
+{-
+extractMax {v} t with splitTree {{monoidPrio}} (_<<=_ (prio v)) mInfty t {lele t (wow2 v)}
+... | split l (Leaf x) r = x
+-}
+
+
+
+
 
 {-
 splitV1 : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bool) (i : V) (as : Digit A v n) → V
