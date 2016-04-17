@@ -29,10 +29,10 @@ monoidSize = record { ∅ = zero ; _⊕_ = _+_ ;
 measuredSize : {A : Set} → Measured A ℕ
 measuredSize = record { measure = λ _ → 1 }
 
-lele : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (ft : FingerTree A v n) → v ≢ ∅ → isEmpty ft ≡ false
-lele Empty le = ⊥-elim (le refl)
-lele (Single _) le = refl
-lele (Deep _ _ _) le = refl
+lemmaEmpty : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (ft : FingerTree A v n) → v ≢ ∅ → isEmpty ft ≡ false
+lemmaEmpty Empty le = ⊥-elim (le refl)
+lemmaEmpty (Single _) le = refl
+lemmaEmpty (Deep _ _ _) le = refl
 
 suc_neq_zero : (n : ℕ) → suc n ≢ zero
 suc_neq_zero n ()
@@ -44,7 +44,7 @@ suc m < zero  = false
 suc m < suc n = m < n
 
 _!_ : {v : ℕ} {A : Set} (ft : FingerTree {{monoidSize}} A (suc v) zero) (i : ℕ) → A
-_!_ {v} t i with splitTree {{monoidSize}} (_<_ i) 0 t {lele t (suc_neq_zero v)}
+_!_ {v} t i with splitTree {{monoidSize}} (_<_ i) 0 t {lemmaEmpty t (suc_neq_zero v)}
 ... | split _ (Leaf x) _ = x
 
 listToSeq : {A : Set} (xs : List A) → FingerTree {{monoidSize}} A (length xs) zero

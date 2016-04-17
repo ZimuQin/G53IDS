@@ -11,6 +11,7 @@ open import Monoid
 open import Measured
 
 {- Basic structures -}
+
 data Node {V : Set} {{m : Monoid V}} (A : Set) : V → ℕ → Set where
   Node2 : {v1 v2 : V} {n : ℕ} → Node A v1 n → Node A v2 n → Node A (v1 ⊕ v2) (suc n)
   Node3 : {v1 v2 v3 : V} {n : ℕ} → Node A v1 n → Node A v2 n → Node A v3 n → Node A ((v1 ⊕ v2) ⊕ v3) (suc n)
@@ -72,6 +73,7 @@ Deep pr m (Four e d c b) ▷ a = substFingerTree Monoid.lemma5 (Deep pr (m ▷ N
 
 
 {- Reduce on structures -}
+
 reducerNode : {A : Set} {B : Set} {n : ℕ} {V : Set} {v : V} {{m : Monoid V}} → (A → B → B) → Node A v n → B → B
 reducerNode _⤙_ (Node2 a b) z = reducerNode _⤙_ a (reducerNode _⤙_ b z)
 reducerNode _⤙_ (Node3 a b c) z = reducerNode _⤙_ a (reducerNode _⤙_ b (reducerNode _⤙_ c z))
@@ -478,6 +480,8 @@ lemmax8 (Deep pr m sf) op z = begin
                                 reducer {{reduceList}} op
                                 (toList {{reduceFingerTree}} (Deep pr m sf)) z
                                 ∎
+
+{- ∀ (xs : List A), toList (toTree xs) ≡ xs  -}
 
 lemmax : {V : Set} {{m : Monoid V}} {A : Set} {{mea : Measured A V}}
            (xs : List A) →
@@ -1109,7 +1113,7 @@ dropUntil : {V : Set} {v : V} {{m : Monoid V}} {A : Set} {n : ℕ} (p : V → Bo
 dropUntil p t = proj₂ (split′ p t)
 
 {-
--- An unfinished implementation
+-- An unfinished implementation of ordered sequences
 data Key (A : Set) : Set where
   noKey : Key A
   key : (a : A) → Key A
@@ -1157,6 +1161,7 @@ deleteAll : {v : Key ℕ} (x : ℕ) (ft : FingerTree {{monoidKey}} ℕ v zero) �
 deleteAll x t with split′ {{monoidKey}} (_<==′_ (key x)) t
 ... | l , r with split′ {{monoidKey}} (_<<′_ (key x)) r
 ... | _ , r′ = l ⋈ r′
+
 {-# NO_TERMINATION_CHECK #-}
 merge : {v1 v2 : Key ℕ} (ft : FingerTree {{monoidKey}} ℕ v1 zero) (ft2 : FingerTree {{monoidKey}} ℕ v2 zero) → FingerTree {{monoidKey}} ℕ (_⊕_ {{monoidKey}} v1 v2) zero
 merge {v1} {v2} as bs with viewL bs | inspect (viewL {{monoidKey}}) bs
